@@ -19,14 +19,6 @@ function resolvePagesBase() {
 
 export default defineConfig({
   base: resolvePagesBase(),
-  build: {
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, "index.html"),
-        experiment: path.resolve(__dirname, "experiment/index.html"),
-      },
-    },
-  },
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them

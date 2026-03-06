@@ -27,17 +27,23 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
+          cache-dependency-path: nav-rail/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefix nav-rail
 
       - name: Build site
-        run: npm run build
+        run: VITE_BASE_PATH=/exp/nav-rail/ npm run build --prefix nav-rail
+
+      - name: Prepare Pages artifact
+        run: |
+          mkdir -p public/nav-rail
+          cp -R nav-rail/dist/. public/nav-rail/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./dist
+          path: ./public
 
   deploy:
     needs: build
