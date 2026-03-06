@@ -1,0 +1,73 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+html,
+body,
+.agents-main-scroll {
+  scrollbar-color: #404040 #171717;
+  scrollbar-width: thin;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.agents-main-scroll::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.agents-main-scroll::-webkit-scrollbar-track {
+  background: #171717;
+  border-left: 1px solid #262626;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.agents-main-scroll::-webkit-scrollbar-thumb {
+  background: #404040;
+  border: 3px solid #171717;
+  border-radius: 4px;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: #0a0a0a;
+}
+
+body {
+  margin: 0;
+}
+
+.agents-background-gradient {
+  opacity: 0.88;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: transform;
+  animation: agents-background-gradient-rotate 24s ease-in-out infinite alternate;
+}
+
+@keyframes agents-background-gradient-rotate {
+  from {
+    transform: rotate(-15deg);
+  }
+
+  to {
+    transform: rotate(15deg);
+  }
+}
+
+.outlined-command-trigger__content {
+  transition: background-color 150ms ease;
+}
+
+.outlined-command-trigger__border {
+  border-color: var(--outlined-command-trigger-color);
+}
+
+.outlined-command-trigger:hover .outlined-command-trigger__content {
+  background-color: var(--outlined-command-trigger-color);
+}
