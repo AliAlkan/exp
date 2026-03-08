@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICY SPHERE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:#010810;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100dvh;
+    overflow:hidden;
+    touch-action:none;
+  }
+  canvas{
+    display:block;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/* ══════════════════════════════════════════════════════
+   ICY SPHERE  ·  Icy Tower with geometric shapes
+   Controls: ←→ / A D  move   SPACE / ↑  jump
+   Touch: left-third = left, right-third = right, center = jump
+══════════════════════════════════════════════════════ */
+
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+
+const W = window.innerWidth;
+const H = window.innerHeight;
+cvs.width = W; cvs.height = H;
+
+/* ─── CONSTANTS ──────────────────────────────────────── */
+const GR   = 0.50;   // gravity (world units / frame²)
+const JV   = -13.2;  // jump velocity (negative = upward)
+const SPD  = 6.2;    // horizontal speed
+const PR   = 14;     // player radius
+const PH   = 11;     // platform visible height
+const PD   = 7;      // platform 3-D side depth
+
+/* ─── GAME STATE ─────────────────────────────────────── */
+let mode = 'title';           // 'title' | 'play' | 'dead'
+let score=0, best=0, combo=0;
+let startWY, highWY, camY;
+let scrollSpd;
+let particles=[], snow=[];
+let shakeMag=0, deadDelay=0;
+
+/* ─── PLAYER ─────────────────────────────────────────── */
+const P = {x:0, wy:0, vx:0, vy:0, landed:false};
+let trail=[];
+
+/* ─── PLATFORMS ──────────────────────────────────────── */
+let plats=[];
+let topGenWY=0;
+
+/* ─── INPUT ──────────────────────────────────────────── */
+const K={};
+let jumpBuf=false;
+let tLeft=false, tRight=false;
+
+window.addEventListener('keydown', e => {
+  if(!K[e.code]){
+    if(['Space','ArrowUp','KeyW'].includes(e.code)) jumpBuf=true;
+    if(['Space','Enter'].includes(e.code)) handleStart();
+  }
+  K[e.code]=true;
+  e.preventDefault();
+});
+window.addEventListener('keyup', e => { K[e.code]=false; });
+
+cvs.addEventListener('touchstart', e=>{
+  handleStart();
+  for(const t of e.changedTouches){
+    const r=cvs.getBoundingClientRect();
+    const tx=t.clientX-r.left;
+    if(tx<W/3)        tLeft=true;
+    else if(tx>W*2/3) tRight=true;
+    else              jumpBuf=true;
+  }
+  e.preventDefault();
+},{passive:false});
+
+cvs.addEventListener('touchend', e=>{
+  let anyLeft=false, anyRight=false;
+  for(const t of e.touches){
+    const r=cvs.getBoundingClientRect();
+    const tx=t.clientX-r.left;
+    if(tx<W/3) anyLeft=true;
+    else if(tx>W*2/3) anyRight=true;
+  }
+  tLeft=anyLeft; tRight=anyRight;
+  e.preventDefault();
+},{passive:false});
+
+function handleStart(){
+  if(mode==='title') startGame();
+  if(mode==='dead' && deadDelay<=0) startGame();
+}
+
+/* ─── UTILITIES ──────────────────────────────────────── */
+const rnd = (a,b) => a+Math.random()*(b-a);
+const w2s = wy => wy - camY;          // world Y → screen Y
+
+/* ─── PLATFORM WIDTH (narrows as you ascend) ─────────── */
+function platW(wy){
+  const h = Math.max(0, startWY - wy);
+  return Math.max(50, 118 - (h/6500)*60);
+}
+
+/* ─── PLATFORM FACTORY ───────────────────────────────── */
+let lastPlatX = 0;
+
+function mkPlat(wy, fixed=false){
+  const w = fixed ? 132 : platW(wy);
+  let x;
+  if(fixed){
+    x = (W-w)/2;
+    lastPlatX = x + w/2;
+  } else {
+    // Step from previous platform by a small random horizontal offset
+    const step = rnd(-80, 80);
+    x = Math.max(8, Math.min(W-w-PD-10, lastPlatX - w/2 + step));
+    lastPlatX = x + w/2;
+  }
+  return {x, wy, w, flash:0};
+}
+
+/* ─── SEED PLATFORMS ─────────────────────────────────── */
+function initPlats(){
+  plats=[];
+  const base = P.wy + PR + 2;
+  plats.push(mkPlat(base, true));   // wide start platform
+  let y=base;
+  for(let i=0;i<70;i++){
+    y -= rnd(52,82);
+    plats.push(mkPlat(y));
+  }
+  topGenWY = y;
+}
+
+function growPlats(){
+  while(topGenWY > camY - H*0.65){
+    topGenWY -= rnd(52,82);
+    plats.push(mkPlat(topGenWY));
+  }
+  plats = plats.filter(p => p.wy < camY+H+220);
+}
+
+/* ─── SNOW ───────────────────────────────────────────── */
+function initSnow(){
+  snow=[];
+  for(let i=0;i<48;i++) snow.push({
+    x:rnd(0,W), y:rnd(0,H),
+    r:rnd(.7,2.4), vy:rnd(.4,1.7), vx:rnd(-.22,.22),
+    a:rnd(.12,.55)
+  });
+}
+
+/* ─── ICE CRYSTAL PARTICLES ──────────────────────────── */
+function burst(x, wy, n=9){
+  for(let i=0;i<n;i++){
+    const a=rnd(-Math.PI, Math.PI);
+    const s=rnd(1.5,4.8);
+    particles.push({
+      x, wy,
+      vx:Math.cos(a)*s, vy:Math.sin(a)*s - .6,
+      life:1, sz:rnd(1.2,3.8),
+      col:Math.random()>.45 ? '#8ee8ff':'#ffffff'
+    });
+  }
+}
+
+/* ─── START GAME ─────────────────────────────────────── */
+function startGame(){
+  mode='play';
+  score=0; combo=0;
+  P.x=W/2; P.wy=H*.62;
+  P.vx=0; P.vy=0; P.landed=false;
+  startWY=P.wy; highWY=P.wy;
+  camY=P.wy - H*.65;
+  scrollSpd=0;
+  particles=[]; trail=[];
+  shakeMag=0; deadDelay=0;
+  jumpBuf=false;
+  initPlats(); initSnow();
+}
+
+/* ─── COLLISION ──────────────────────────────────────── */
+function checkLand(){
+  if(P.vy<=0) return;
+  P.vy = Math.min(P.vy, 18); // cap fall speed against tunnelling
+  const bot  = P.wy + PR;
+  const prev = bot - P.vy;
+  for(const p of plats){
+    if(P.x > p.x-5 && P.x < p.x+p.w+5 && bot >= p.wy && prev < p.wy+4){
+      P.wy    = p.wy - PR;
+      P.vy    = 0;
+      P.landed= true;
+      p.flash = 15;
+      burst(P.x, p.wy, 9);
+      combo++;
+      return;
+    }
+  }
+}
+
+/* ─── UPDATE ─────────────────────────────────────────── */
+function update(){
+  // Snow always runs
+  for(const s of snow){
+    s.y+=s.vy; s.x+=s.vx;
+    if(s.y>H+3){s.y=-3;s.x=rnd(0,W);}
+    if(s.x<-3) s.x=W+3;
+    if(s.x>W+3) s.x=-3;
+  }
+
+  if(mode==='dead'){
+    if(deadDelay>0) deadDelay--;
+    for(const p of particles){p.x+=p.vx;p.wy+=p.vy;p.vy+=.12;p.vx*=.95;p.life-=.024;}
+    particles=particles.filter(p=>p.life>0);
+    return;
+  }
+  if(mode==='title') return;
+
+  /* Auto-jump as soon as sphere lands */
+  if(P.landed){ P.vy=JV; P.landed=false; }
+  jumpBuf=false;
+
+  /* Move */
+  const gl = K['ArrowLeft']||K['KeyA']||tLeft;
+  const gr = K['ArrowRight']||K['KeyD']||tRight;
+  P.vx = gl ? -SPD : gr ? SPD : 0;
+
+  /* Physics */
+  P.vy += GR;
+  P.x  += P.vx;
+  P.wy += P.vy;
+
+  /* Horizontal wrap */
+  if(P.x < -PR) P.x=W+PR;
+  if(P.x > W+PR) P.x=-PR;
+
+  /* Land check */
+  P.landed=false;
+  checkLand();
+
+  /* Motion trail */
+  trail.push({x:P.x, wy:P.wy, t:1});
+  if(trail.length>9) trail.shift();
+  for(const t of trail) t.t-=.11;
+  trail=trail.filter(t=>t.t>0);
+
+  /* Camera: smooth follow upward only */
+  const tgt = P.wy - H*.65;
+  if(tgt < camY) camY += (tgt-camY)*.11;
+
+  /* Auto-scroll (ramps with score) */
+  scrollSpd = Math.min(2.6, .22 + score*.0018);
+  camY -= scrollSpd;
+
+  /* Score = height */
+  if(P.wy < highWY){
+    highWY = P.wy;
+    score = Math.max(score, Math.round((startWY-highWY)/9));
+    if(score>best) best=score;
+  }
+
+  /* Platform flash decay */
+  for(const p of plats) if(p.flash>0) p.flash--;
+
+  /* Particles */
+  for(const p of particles){p.x+=p.vx;p.wy+=p.vy;p.vy+=.12;p.vx*=.95;p.life-=.024;}
+  particles=particles.filter(p=>p.life>0);
+
+  /* Gen more platforms */
+  growPlats();
+
+  /* Death: fell below screen */
+  if(P.wy > camY+H+PR+50){ mode='dead'; combo=0; deadDelay=60; }
+
+  /* Shake decay */
+  shakeMag*=.70;
+  if(shakeMag<.06) shakeMag=0;
+}
+
+/* ─── DRAW BACKGROUND ────────────────────────────────── */
+function drawBG(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#010810');
+  g.addColorStop(1,'#020d1c');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // Parallax grid
+  ctx.strokeStyle='rgba(0,95,155,.12)';
+  ctx.lineWidth=.5;
+  const gsz=55;
+  const oy=((-camY*.22)%gsz+gsz)%gsz;
+  for(let x=0;x<=W;x+=gsz){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=oy-gsz;y<=H+gsz;y+=gsz){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Subtle vignette
+  const vig=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.85);
+  vig.addColorStop(0,'rgba(0,0,0,0)');
+  vig.addColorStop(1,'rgba(0,0,0,.45)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+}
+
+/* ─── DRAW SNOW ──────────────────────────────────────── */
+function drawSnow(){
+  ctx.save();
+  for(const s of snow){
+    ctx.globalAlpha=s.a;
+    ctx.fillStyle='#aaddff';
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ─── DRAW ICE CUBE PLATFORM ─────────────────────────── */
+function drawPlat(p){
+  const sy=w2s(p.wy);
+  if(sy>H+22||sy<-22) return;
+  const {x,w}=p, fl=p.flash/15;
+
+  // Top bright strip
+  const tg=ctx.createLinearGradient(x,sy-4,x,sy+3);
+  tg.addColorStop(0, fl ? '#dff8ff' : '#a4e8ff');
+  tg.addColorStop(1, fl ? '#a8e0ff' : '#60c4f0');
+  ctx.fillStyle=tg;
+  ctx.fillRect(x, sy-4, w, 6);
+
+  // Front face
+  const fg=ctx.createLinearGradient(x,sy+2,x,sy+PH);
+  fg.addColorStop(0, fl ? '#68d4f8':'#2390ce');
+  fg.addColorStop(1, fl ? '#38a8e0':'#0a5888');
+  ctx.fillStyle=fg;
+  ctx.fillRect(x, sy+2, w, PH-2);
+
+  // Bottom shadow strip
+  ctx.fillStyle='rgba(0,12,38,.58)';
+  ctx.fillRect(x+2, sy+PH-2, w-2, 3);
+
+  // Right side face (3-D illusion)
+  ctx.fillStyle = fl ? '#1a78b5':'#083c5e';
+  ctx.beginPath();
+  ctx.moveTo(x+w,    sy-4);
+  ctx.lineTo(x+w+PD, sy-4-PD*.5);
+  ctx.lineTo(x+w+PD, sy+PH-PD*.5);
+  ctx.lineTo(x+w,    sy+PH);
+  ctx.closePath(); ctx.fill();
+
+  // Top angled face
+  ctx.fillStyle = fl ? '#c0eeff':'#72d8f8';
+  ctx.beginPath();
+  ctx.moveTo(x,      sy-4);
+  ctx.lineTo(x+w,    sy-4);
+  ctx.lineTo(x+w+PD, sy-4-PD*.5);
+  ctx.lineTo(x+PD,   sy-4-PD*.5);
+  ctx.closePath(); ctx.fill();
+
+  // Glint line on top
+  ctx.fillStyle='rgba(255,255,255,.32)';
+  ctx.fillRect(x+5, sy-4, Math.min(w*.32,32), 2);
+}
+
+/* ─── DRAW MOTION TRAIL ──────────────────────────────── */
+function drawTrail(){
+  ctx.save();
+  for(const t of trail){
+    const sy=w2s(t.wy);
+    ctx.globalAlpha=t.t*.26;
+    ctx.fillStyle='#4ab8e8';
+    ctx.beginPath(); ctx.arc(t.x,sy,PR*(t.t*.55+.2),0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ─── DRAW PLAYER SPHERE ─────────────────────────────── */
+function drawPlayer(){
+  const sx=P.x, sy=w2s(P.wy);
+  if(sy<-PR-20||sy>H+PR+20) return;
+
+  // Flat shadow ellipse
+  ctx.save();
+  ctx.globalAlpha=.18;
+  ctx.fillStyle='#001424';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy+PR*.94, PR*1.08, PR*.32, 0,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // Soft glow halo
+  const aura=ctx.createRadialGradient(sx,sy,PR*.4,sx,sy,PR*3.2);
+  aura.addColorStop(0,'rgba(100,195,255,.17)');
+  aura.addColorStop(1,'rgba(0,60,140,0)');
+  ctx.fillStyle=aura;
+  ctx.beginPath(); ctx.arc(sx,sy,PR*3.2,0,Math.PI*2); ctx.fill();
+
+  // Glass sphere body
+  const sph=ctx.createRadialGradient(
+    sx-PR*.33, sy-PR*.33, PR*.03,
+    sx,        sy,        PR
+  );
+  sph.addColorStop(0,  '#f5faff');
+  sph.addColorStop(.18,'#caeffe');
+  sph.addColorStop(.52,'#52b8e8');
+  sph.addColorStop(.84,'#1560a5');
+  sph.addColorStop(1,  '#0a3c6e');
+  ctx.fillStyle=sph;
+  ctx.beginPath(); ctx.arc(sx,sy,PR,0,Math.PI*2); ctx.fill();
+
+  // Rim light (bottom-right edge glow)
+  const rim=ctx.createRadialGradient(sx+PR*.55,sy+PR*.5,0,sx+PR*.55,sy+PR*.5,PR*.7);
+  rim.addColorStop(0,'rgba(80,190,255,.22)');
+  rim.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=rim;
+  ctx.beginPath(); ctx.arc(sx,sy,PR,0,Math.PI*2); ctx.fill();
+
+  // Primary specular highlight
+  ctx.fillStyle='rgba(255,255,255,.92)';
+  ctx.beginPath(); ctx.arc(sx-PR*.30, sy-PR*.32, PR*.21, 0,Math.PI*2); ctx.fill();
+
+  // Tiny secondary highlight
+  ctx.fillStyle='rgba(255,255,255,.52)';
+  ctx.beginPath(); ctx.arc(sx-PR*.10, sy-PR*.53, PR*.09, 0,Math.PI*2); ctx.fill();
+}
+
+/* ─── DRAW PARTICLES ─────────────────────────────────── */
+function drawParticles(){
+  ctx.save();
+  for(const p of particles){
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.col;
+    ctx.beginPath(); ctx.arc(p.x, w2s(p.wy), p.sz,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ─── DRAW HUD ───────────────────────────────────────── */
+const F = '"Orbitron",monospace';
+function drawHUD(){
+  ctx.save();
+
+  // Score — top right
+  ctx.textAlign='right';
+  ctx.font=`900 26px ${F}`;
+  ctx.fillStyle='#00e5ff';
+  ctx.shadowColor='#00e5ff'; ctx.shadowBlur=18;
+  ctx.fillText(score, W-13, 34);
+  ctx.shadowBlur=0;
+  ctx.font=`400 8.5px ${F}`;
+  ctx.fillStyle='#28637f';
+  ctx.fillText('HEIGHT', W-13, 50);
+
+  // Best — bottom right
+  ctx.font=`400 11px ${F}`;
+  ctx.fillStyle='#1a4a62';
+  ctx.fillText(`BEST  ${best}`, W-13, H-13);
+
+  // Combo — top left (only if > 1)
+  if(combo>1){
+    ctx.textAlign='left';
+    ctx.font=`700 22px ${F}`;
+    const hue = Math.min(combo*9, 50);
+    ctx.fillStyle=`hsl(${36-hue},100%,62%)`;
+    ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=12;
+    ctx.fillText(`×${combo}`, 13, 34);
+    ctx.shadowBlur=0;
+    ctx.font=`400 8.5px ${F}`;
+    ctx.fillStyle='#553318';
+    ctx.fillText('COMBO', 13, 50);
+  }
+
+  // Speed indicator bar (subtle, bottom left)
+  if(mode==='play'){
+    const barW=60, barH=3, bx=13, by=H-16;
+    const fill=Math.min(scrollSpd/2.6,1);
+    ctx.fillStyle='rgba(0,50,80,.55)';
+    ctx.fillRect(bx,by,barW,barH);
+    const bg=ctx.createLinearGradient(bx,by,bx+barW*fill,by);
+    bg.addColorStop(0,'#005588');
+    bg.addColorStop(1,'#00e5ff');
+    ctx.fillStyle=bg;
+    ctx.fillRect(bx,by,barW*fill,barH);
+    ctx.font=`400 8px ${F}`;
+    ctx.fillStyle='#1a4a62';
+    ctx.textAlign='left';
+    ctx.fillText('SPEED',bx,H-20);
+  }
+
+  ctx.restore();
+}
+
+/* ─── ROUNDED RECT ───────────────────────────────────── */
+function rrect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y, x+w,y+h, r);
+  ctx.arcTo(x+w,y+h, x,y+h, r);
+  ctx.arcTo(x,y+h, x,y, r);
+  ctx.arcTo(x,y, x+w,y, r);
+  ctx.closePath();
+}
+
+/* ─── TITLE SCREEN ───────────────────────────────────── */
+function drawTitle(){
+  ctx.fillStyle='rgba(1,6,18,.87)';
+  ctx.fillRect(0,0,W,H);
+
+  const cw=W*.84, ch=240, cx=(W-cw)/2, cy=H/2-ch/2-18;
+  ctx.fillStyle='rgba(0,22,52,.68)';
+  ctx.strokeStyle='rgba(0,170,240,.2)';
+  ctx.lineWidth=1;
+  rrect(cx,cy,cw,ch,14); ctx.fill(); ctx.stroke();
+
+  ctx.textAlign='center';
+  ctx.font=`900 52px ${F}`;
+  ctx.fillStyle='#00e5ff';
+  ctx.shadowColor='#00e5ff'; ctx.shadowBlur=32;
+  ctx.fillText('ICY', W/2, cy+68);
+  ctx.fillStyle='#ffffff';
+  ctx.shadowColor='rgba(180,240,255,.7)'; ctx.shadowBlur=14;
+  ctx.fillText('SPHERE', W/2, cy+122);
+  ctx.shadowBlur=0;
+
+  ctx.font=`400 10px ${F}`;
+  ctx.fillStyle='#18506a';
+  ctx.fillText('← →  MOVE         SPACE / ↑  JUMP', W/2, cy+152);
+
+  // Pulsing start prompt
+  const p=.55+.45*Math.sin(Date.now()*.003);
+  ctx.globalAlpha=p;
+  ctx.font=`700 13px ${F}`;
+  ctx.fillStyle='#00e5ff';
+  ctx.fillText('PRESS SPACE TO START', W/2, cy+ch-24);
+  ctx.globalAlpha=1;
+}
+
+/* ─── GAME OVER SCREEN ───────────────────────────────── */
+function drawDead(){
+  ctx.fillStyle='rgba(1,4,14,.84)';
+  ctx.fillRect(0,0,W,H);
+
+  const cw=W*.84, ch=230, cx=(W-cw)/2, cy=H/2-ch/2-18;
+  ctx.fillStyle='rgba(28,0,8,.72)';
+  ctx.strokeStyle='rgba(255,55,75,.2)';
+  ctx.lineWidth=1;
+  rrect(cx,cy,cw,ch,14); ctx.fill(); ctx.stroke();
+
+  ctx.textAlign='center';
+  ctx.font=`900 44px ${F}`;
+  ctx.fillStyle='#ff2d4a';
+  ctx.shadowColor='#ff1a38'; ctx.shadowBlur=28;
+  ctx.fillText('GAME OVER', W/2, cy+65);
+  ctx.shadowBlur=0;
+
+  ctx.font=`700 20px ${F}`;
+  ctx.fillStyle='#00e5ff';
+  ctx.shadowColor='#00e5ff'; ctx.shadowBlur=10;
+  ctx.fillText(`SCORE  ${score}`, W/2, cy+106);
+  ctx.shadowBlur=0;
+
+  ctx.font=`400 13px ${F}`;
+  ctx.fillStyle='#254e66';
+  ctx.fillText(`BEST  ${best}`, W/2, cy+134);
+
+  if(deadDelay<=0){
+    const p=.55+.45*Math.sin(Date.now()*.003);
+    ctx.globalAlpha=p;
+    ctx.font=`700 13px ${F}`;
+    ctx.fillStyle='#ffffff';
+    ctx.fillText('PRESS SPACE TO RETRY', W/2, cy+ch-24);
+    ctx.globalAlpha=1;
+  }
+}
+
+/* ─── MAIN LOOP ──────────────────────────────────────── */
+function loop(){
+  requestAnimationFrame(loop);
+  update();
+
+  ctx.save();
+  ctx.translate(0, 0);
+
+  drawBG();
+  drawSnow();
+  for(const p of plats) drawPlat(p);
+  drawParticles();
+  drawTrail();
+  drawPlayer();
+  drawHUD();
+  if(mode==='title') drawTitle();
+  if(mode==='dead')  drawDead();
+
+  ctx.restore();
+}
+
+/* ─── INIT ───────────────────────────────────────────── */
+initSnow();
+loop();
+</script>
+</body>
+</html>
