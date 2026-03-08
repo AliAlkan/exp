@@ -16,14 +16,148 @@
     height:100dvh;
     overflow:hidden;
     touch-action:none;
+    font-family:'Orbitron',monospace;
   }
   canvas{
     display:block;
+  }
+  #ui-layer{
+    position:fixed;
+    right:12px;
+    bottom:12px;
+    z-index:5;
+    width:min(320px,calc(100vw - 24px));
+  }
+  .lb-card{
+    background:rgba(2,16,33,.78);
+    border:1px solid rgba(64,179,228,.24);
+    border-radius:12px;
+    padding:12px;
+    backdrop-filter:blur(3px);
+    box-shadow:0 8px 26px rgba(0,0,0,.34);
+  }
+  .lb-title{
+    font-size:11px;
+    letter-spacing:.08em;
+    color:#7edaff;
+    margin:0 0 3px;
+  }
+  .lb-subtitle{
+    font-size:9px;
+    color:#3f7894;
+    margin:0 0 8px;
+  }
+  #leaderboard-list{
+    list-style:none;
+    display:grid;
+    gap:4px;
+    margin:0;
+    padding:0;
+    font-size:11px;
+    color:#d7f5ff;
+    max-height:176px;
+    overflow:auto;
+  }
+  .lb-entry{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    border-bottom:1px dashed rgba(84,177,219,.15);
+    padding-bottom:2px;
+  }
+  .lb-entry-name{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:68%;
+    color:#aee7ff;
+  }
+  .lb-entry-score{
+    color:#00e5ff;
+    font-weight:700;
+  }
+  .lb-empty{
+    font-size:10px;
+    color:#4b7f9a;
+  }
+  #leaderboard-form{
+    display:none;
+    margin-top:10px;
+    gap:6px;
+  }
+  #leaderboard-form.is-visible{
+    display:grid;
+  }
+  #leaderboard-form label{
+    font-size:9px;
+    color:#67b4d6;
+  }
+  .lb-input-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:6px;
+  }
+  #lb-name{
+    min-width:0;
+    border-radius:8px;
+    border:1px solid rgba(72,174,217,.45);
+    background:rgba(0,18,38,.74);
+    color:#d8f7ff;
+    padding:8px 9px;
+    font:400 11px 'Orbitron',monospace;
+    outline:none;
+  }
+  #lb-name:focus{
+    border-color:#00d2ff;
+    box-shadow:0 0 0 2px rgba(0,210,255,.18);
+  }
+  #lb-submit{
+    border:0;
+    border-radius:8px;
+    background:linear-gradient(180deg,#00c9ff,#009ec8);
+    color:#021523;
+    font:700 11px 'Orbitron',monospace;
+    padding:0 11px;
+    cursor:pointer;
+  }
+  #lb-submit:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+  #lb-note{
+    font-size:9px;
+    color:#4f87a1;
+    min-height:11px;
+  }
+  #ui-layer[hidden]{
+    display:none;
+  }
+  @media (max-width:640px){
+    #ui-layer{
+      left:12px;
+      right:12px;
+      width:auto;
+    }
   }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="ui-layer" aria-live="polite">
+  <section class="lb-card" aria-label="Leaderboard">
+    <h2 class="lb-title">LEADERBOARD</h2>
+    <p class="lb-subtitle">Stored on this device</p>
+    <ol id="leaderboard-list"></ol>
+    <form id="leaderboard-form" autocomplete="off">
+      <label for="lb-name">Add your score</label>
+      <div class="lb-input-row">
+        <input id="lb-name" name="name" type="text" maxlength="16" placeholder="Your name" required>
+        <button id="lb-submit" type="submit">SAVE</button>
+      </div>
+      <p id="lb-note"></p>
+    </form>
+  </section>
+</div>
 <script>
 /* ══════════════════════════════════════════════════════
    ICY SPHERE  ·  Icy Tower with geometric shapes
@@ -33,6 +167,12 @@
 
 const cvs = document.getElementById('c');
 const ctx = cvs.getContext('2d');
+const uiLayer = document.getElementById('ui-layer');
+const leaderboardListEl = document.getElementById('leaderboard-list');
+const leaderboardForm = document.getElementById('leaderboard-form');
+const leaderboardNameEl = document.getElementById('lb-name');
+const leaderboardSubmitEl = document.getElementById('lb-submit');
+const leaderboardNoteEl = document.getElementById('lb-note');
 
 const W = window.innerWidth;
 const H = window.innerHeight;
@@ -45,6 +185,10 @@ const SPD  = 6.2;    // horizontal speed
 const PR   = 14;     // player radius
 const PH   = 11;     // platform visible height
 const PD   = 7;      // platform 3-D side depth
+const LB_KEY = 'icy-sphere-leaderboard-v1';
+const LB_NAME_KEY = 'icy-sphere-last-name-v1';
+const LB_MAX_ENTRIES = 10;
+const LB_MAX_NAME_LEN = 16;
 
 /* ─── GAME STATE ─────────────────────────────────────── */
 let mode = 'title';           // 'title' | 'play' | 'dead'
@@ -53,6 +197,9 @@ let startWY, highWY, camY;
 let scrollSpd;
 let particles=[], snow=[];
 let shakeMag=0, deadDelay=0;
+let leaderboard = [];
+let awaitLeaderboardSubmit = false;
+let namePrompted = false;
 
 /* ─── PLAYER ─────────────────────────────────────────── */
 const P = {x:0, wy:0, vx:0, vy:0, landed:false};
@@ -66,8 +213,24 @@ let topGenWY=0;
 const K={};
 let jumpBuf=false;
 let tLeft=false, tRight=false;
+const GAME_KEYS = new Set([
+  'Space','Enter',
+  'ArrowUp','KeyW',
+  'ArrowLeft','KeyA',
+  'ArrowRight','KeyD',
+]);
+
+function isTypingTarget(target){
+  return target instanceof HTMLElement && (
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'SELECT' ||
+    target.isContentEditable
+  );
+}
 
 window.addEventListener('keydown', e => {
+  if(isTypingTarget(e.target) || !GAME_KEYS.has(e.code)) return;
   if(!K[e.code]){
     if(['Space','ArrowUp','KeyW'].includes(e.code)) jumpBuf=true;
     if(['Space','Enter'].includes(e.code)) handleStart();
@@ -75,7 +238,11 @@ window.addEventListener('keydown', e => {
   K[e.code]=true;
   e.preventDefault();
 });
-window.addEventListener('keyup', e => { K[e.code]=false; });
+window.addEventListener('keyup', e => {
+  if(isTypingTarget(e.target) || !GAME_KEYS.has(e.code)) return;
+  K[e.code]=false;
+  e.preventDefault();
+});
 
 cvs.addEventListener('touchstart', e=>{
   handleStart();
@@ -109,6 +276,148 @@ function handleStart(){
 /* ─── UTILITIES ──────────────────────────────────────── */
 const rnd = (a,b) => a+Math.random()*(b-a);
 const w2s = wy => wy - camY;          // world Y → screen Y
+
+function sanitizeName(name){
+  if(typeof name!=='string') return '';
+  return name
+    .replace(/\s+/g,' ')
+    .replace(/[^A-Za-z0-9 _.-]/g,'')
+    .trim()
+    .slice(0,LB_MAX_NAME_LEN);
+}
+
+function sanitizeScore(value){
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function sanitizeTimestamp(value){
+  return Number.isFinite(value) ? Math.floor(value) : Date.now();
+}
+
+function loadLeaderboard(){
+  try{
+    const raw = localStorage.getItem(LB_KEY);
+    if(!raw) return [];
+    const parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed)) return [];
+    return parsed
+      .map(item => {
+        if(!item || typeof item !== 'object') return null;
+        const name = sanitizeName(item.name);
+        if(!name) return null;
+        return {
+          name,
+          score: sanitizeScore(item.score),
+          at: sanitizeTimestamp(item.at),
+        };
+      })
+      .filter(Boolean)
+      .sort((a,b)=>b.score-a.score || a.at-b.at)
+      .slice(0,LB_MAX_ENTRIES);
+  }catch{
+    return [];
+  }
+}
+
+function saveLeaderboard(){
+  try{
+    localStorage.setItem(LB_KEY, JSON.stringify(leaderboard));
+  }catch{
+    // Ignore storage quota/private mode failures.
+  }
+}
+
+function renderLeaderboard(){
+  leaderboardListEl.textContent='';
+  if(!leaderboard.length){
+    const empty = document.createElement('li');
+    empty.className='lb-empty';
+    empty.textContent='No scores yet.';
+    leaderboardListEl.append(empty);
+    return;
+  }
+  leaderboard.forEach((entry, idx) => {
+    const row = document.createElement('li');
+    row.className='lb-entry';
+
+    const name = document.createElement('span');
+    name.className='lb-entry-name';
+    name.textContent = `${String(idx+1).padStart(2,'0')}  ${entry.name}`;
+
+    const scoreEl = document.createElement('span');
+    scoreEl.className='lb-entry-score';
+    scoreEl.textContent = String(entry.score);
+
+    row.append(name, scoreEl);
+    leaderboardListEl.append(row);
+  });
+}
+
+function setLeaderboardNote(message){
+  leaderboardNoteEl.textContent = message;
+}
+
+function updateLeaderboardPanel(){
+  uiLayer.hidden = mode === 'play';
+  const canSubmit = mode === 'dead' && deadDelay <= 0 && awaitLeaderboardSubmit;
+  leaderboardForm.classList.toggle('is-visible', canSubmit);
+  leaderboardNameEl.disabled = !canSubmit;
+  leaderboardSubmitEl.disabled = !canSubmit;
+
+  if(mode==='title'){
+    setLeaderboardNote('Reach score 1+ to submit.');
+    return;
+  }
+  if(mode==='dead' && deadDelay > 0){
+    setLeaderboardNote('Stand by...');
+    return;
+  }
+  if(canSubmit){
+    setLeaderboardNote('Enter your name and save once.');
+    if(!namePrompted){
+      namePrompted = true;
+      leaderboardNameEl.focus({preventScroll:true});
+      leaderboardNameEl.select();
+    }
+    return;
+  }
+  if(mode==='dead'){
+    setLeaderboardNote('Score saved. Press space to retry.');
+    return;
+  }
+  setLeaderboardNote('');
+}
+
+function pushLeaderboardScore(name, submittedScore){
+  leaderboard.push({
+    name,
+    score: sanitizeScore(submittedScore),
+    at: Date.now(),
+  });
+  leaderboard.sort((a,b)=>b.score-a.score || a.at-b.at);
+  leaderboard = leaderboard.slice(0,LB_MAX_ENTRIES);
+  saveLeaderboard();
+  renderLeaderboard();
+}
+
+function handleGameOver(){
+  if(mode==='dead') return;
+  mode='dead';
+  combo=0;
+  deadDelay=60;
+  awaitLeaderboardSubmit = score > 0;
+  namePrompted = false;
+  if(awaitLeaderboardSubmit){
+    try{
+      leaderboardNameEl.value = sanitizeName(localStorage.getItem(LB_NAME_KEY) || '');
+    }catch{
+      leaderboardNameEl.value = '';
+    }
+  }else{
+    leaderboardNameEl.value = '';
+  }
+  updateLeaderboardPanel();
+}
 
 /* ─── PLATFORM WIDTH (narrows as you ascend) ─────────── */
 function platW(wy){
@@ -191,7 +500,11 @@ function startGame(){
   particles=[]; trail=[];
   shakeMag=0; deadDelay=0;
   jumpBuf=false;
+  awaitLeaderboardSubmit=false;
+  namePrompted=false;
+  leaderboardNameEl.value='';
   initPlats(); initSnow();
+  updateLeaderboardPanel();
 }
 
 /* ─── COLLISION ──────────────────────────────────────── */
@@ -224,7 +537,10 @@ function update(){
   }
 
   if(mode==='dead'){
-    if(deadDelay>0) deadDelay--;
+    if(deadDelay>0){
+      deadDelay--;
+      if(deadDelay===0) updateLeaderboardPanel();
+    }
     for(const p of particles){p.x+=p.vx;p.wy+=p.vy;p.vy+=.12;p.vx*=.95;p.life-=.024;}
     particles=particles.filter(p=>p.life>0);
     return;
@@ -285,7 +601,7 @@ function update(){
   growPlats();
 
   /* Death: fell below screen */
-  if(P.wy > camY+H+PR+50){ mode='dead'; combo=0; deadDelay=60; }
+  if(P.wy > camY+H+PR+50){ handleGameOver(); }
 
   /* Shake decay */
   shakeMag*=.70;
@@ -605,6 +921,35 @@ function loop(){
 }
 
 /* ─── INIT ───────────────────────────────────────────── */
+leaderboard = loadLeaderboard();
+best = leaderboard.length ? leaderboard[0].score : 0;
+renderLeaderboard();
+updateLeaderboardPanel();
+
+leaderboardNameEl.addEventListener('input', () => {
+  const next = sanitizeName(leaderboardNameEl.value);
+  if(next !== leaderboardNameEl.value) leaderboardNameEl.value = next;
+});
+
+leaderboardForm.addEventListener('submit', e => {
+  e.preventDefault();
+  if(mode!=='dead' || deadDelay>0 || !awaitLeaderboardSubmit) return;
+
+  const cleanName = sanitizeName(leaderboardNameEl.value) || 'ANON';
+  pushLeaderboardScore(cleanName, score);
+  if(score > best) best = score;
+
+  awaitLeaderboardSubmit = false;
+  namePrompted = false;
+  leaderboardNameEl.value = '';
+  try{
+    localStorage.setItem(LB_NAME_KEY, cleanName);
+  }catch{
+    // Ignore storage write failures.
+  }
+  updateLeaderboardPanel();
+});
+
 initSnow();
 loop();
 </script>
