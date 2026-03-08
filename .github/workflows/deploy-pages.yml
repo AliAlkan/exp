@@ -41,8 +41,9 @@ jobs:
 
       - name: Prepare Pages artifact
         run: |
-          mkdir -p public/nav-rail
+          mkdir -p public/nav-rail public/icy-sphere
           cp -R nav-rail/dist/. public/nav-rail/
+          cp -R icy-sphere/. public/icy-sphere/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
