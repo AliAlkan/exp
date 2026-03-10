@@ -29,12 +29,10 @@
     width:min(320px,calc(100vw - 24px));
   }
   .lb-card{
-    background:rgba(2,16,33,.78);
-    border:1px solid rgba(64,179,228,.24);
+    background:#020b16;
+    border:1px solid rgba(64,179,228,.4);
     border-radius:12px;
     padding:12px;
-    backdrop-filter:blur(3px);
-    box-shadow:0 8px 26px rgba(0,0,0,.34);
   }
   .lb-title{
     font-size:11px;
@@ -109,12 +107,11 @@
   }
   #lb-name:focus{
     border-color:#00d2ff;
-    box-shadow:0 0 0 2px rgba(0,210,255,.18);
   }
   #lb-submit{
     border:0;
     border-radius:8px;
-    background:linear-gradient(180deg,#00c9ff,#009ec8);
+    background:#00c9ff;
     color:#021523;
     font:700 11px 'Orbitron',monospace;
     padding:0 11px;
@@ -548,7 +545,7 @@ function handleGameOver(){
   updateLeaderboardPanel();
 }
 
-/* ─── PLATFORM WIDTH (narrows as you ascend) ─────────── */
+/* ─── PLATFORM WIDTH (narrows as you ascend, with variance) ─────────── */
 function platW(wy){
   const h = Math.max(0, startWY - wy);
   return Math.max(50, 118 - (h/6500)*60);
@@ -558,7 +555,10 @@ function platW(wy){
 let lastPlatX = 0;
 
 function mkPlat(wy, fixed=false){
-  const w = fixed ? 132 : platW(wy);
+  // Base width depends on height; add some randomness so some bars are wider/narrower
+  const baseW = fixed ? 132 : platW(wy);
+  const variance = fixed ? 1 : rnd(0.7, 1.45);
+  const w = Math.max(42, Math.min(170, baseW * variance));
   let x;
   if(fixed){
     x = (W-w)/2;
@@ -676,8 +676,14 @@ function update(){
   }
   if(mode==='title') return;
 
-  /* Auto-jump as soon as sphere lands */
-  if(P.landed){ P.vy=JV; P.landed=false; }
+  /* Auto-jump as soon as sphere lands, with speed/combo-based boost */
+  if(P.landed){
+    const speedFactor = Math.min(Math.abs(P.vx) / SPD, 1);   // 0..1 based on horizontal speed
+    const comboFactor = Math.min(combo, 7);                  // stronger jumps on streaks
+    const extraBoost  = - (2.0 * speedFactor + 0.9 * comboFactor); // more negative = higher jump
+    P.vy = JV + extraBoost;
+    P.landed=false;
+  }
   jumpBuf=false;
 
   /* Move */
@@ -739,24 +745,17 @@ function update(){
 
 /* ─── DRAW BACKGROUND ────────────────────────────────── */
 function drawBG(){
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'#010810');
-  g.addColorStop(1,'#020d1c');
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // Flat background
+  ctx.fillStyle='#020915';
+  ctx.fillRect(0,0,W,H);
 
-  // Parallax grid
-  ctx.strokeStyle='rgba(0,95,155,.12)';
+  // Minimal parallax grid
+  ctx.strokeStyle='rgba(0,95,155,.18)';
   ctx.lineWidth=.5;
   const gsz=55;
   const oy=((-camY*.22)%gsz+gsz)%gsz;
   for(let x=0;x<=W;x+=gsz){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
   for(let y=oy-gsz;y<=H+gsz;y+=gsz){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-
-  // Subtle vignette
-  const vig=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.85);
-  vig.addColorStop(0,'rgba(0,0,0,0)');
-  vig.addColorStop(1,'rgba(0,0,0,.45)');
-  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
 }
 
 /* ─── DRAW SNOW ──────────────────────────────────────── */
@@ -776,45 +775,17 @@ function drawPlat(p){
   if(sy>H+22||sy<-22) return;
   const {x,w}=p, fl=p.flash/15;
 
-  // Top bright strip
-  const tg=ctx.createLinearGradient(x,sy-4,x,sy+3);
-  tg.addColorStop(0, fl ? '#dff8ff' : '#a4e8ff');
-  tg.addColorStop(1, fl ? '#a8e0ff' : '#60c4f0');
-  ctx.fillStyle=tg;
-  ctx.fillRect(x, sy-4, w, 6);
+  // Flat platform body
+  const baseCol = fl ? '#4fd2ff' : '#2da8e0';
+  const edgeCol = fl ? '#0f4f7a' : '#0c3958';
 
-  // Front face
-  const fg=ctx.createLinearGradient(x,sy+2,x,sy+PH);
-  fg.addColorStop(0, fl ? '#68d4f8':'#2390ce');
-  fg.addColorStop(1, fl ? '#38a8e0':'#0a5888');
-  ctx.fillStyle=fg;
-  ctx.fillRect(x, sy+2, w, PH-2);
+  ctx.fillStyle = baseCol;
+  ctx.fillRect(x, sy-4, w, PH);
 
-  // Bottom shadow strip
-  ctx.fillStyle='rgba(0,12,38,.58)';
-  ctx.fillRect(x+2, sy+PH-2, w-2, 3);
-
-  // Right side face (3-D illusion)
-  ctx.fillStyle = fl ? '#1a78b5':'#083c5e';
-  ctx.beginPath();
-  ctx.moveTo(x+w,    sy-4);
-  ctx.lineTo(x+w+PD, sy-4-PD*.5);
-  ctx.lineTo(x+w+PD, sy+PH-PD*.5);
-  ctx.lineTo(x+w,    sy+PH);
-  ctx.closePath(); ctx.fill();
-
-  // Top angled face
-  ctx.fillStyle = fl ? '#c0eeff':'#72d8f8';
-  ctx.beginPath();
-  ctx.moveTo(x,      sy-4);
-  ctx.lineTo(x+w,    sy-4);
-  ctx.lineTo(x+w+PD, sy-4-PD*.5);
-  ctx.lineTo(x+PD,   sy-4-PD*.5);
-  ctx.closePath(); ctx.fill();
-
-  // Glint line on top
-  ctx.fillStyle='rgba(255,255,255,.32)';
-  ctx.fillRect(x+5, sy-4, Math.min(w*.32,32), 2);
+  // Simple outline
+  ctx.strokeStyle = edgeCol;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x+0.5, sy-4+0.5, w-1, PH-1);
 }
 
 /* ─── DRAW MOTION TRAIL ──────────────────────────────── */
@@ -843,40 +814,16 @@ function drawPlayer(){
   ctx.fill();
   ctx.restore();
 
-  // Soft glow halo
-  const aura=ctx.createRadialGradient(sx,sy,PR*.4,sx,sy,PR*3.2);
-  aura.addColorStop(0,'rgba(100,195,255,.17)');
-  aura.addColorStop(1,'rgba(0,60,140,0)');
-  ctx.fillStyle=aura;
-  ctx.beginPath(); ctx.arc(sx,sy,PR*3.2,0,Math.PI*2); ctx.fill();
+  // Flat player disc
+  ctx.fillStyle='#00e5ff';
+  ctx.beginPath();
+  ctx.arc(sx,sy,PR,0,Math.PI*2);
+  ctx.fill();
 
-  // Glass sphere body
-  const sph=ctx.createRadialGradient(
-    sx-PR*.33, sy-PR*.33, PR*.03,
-    sx,        sy,        PR
-  );
-  sph.addColorStop(0,  '#f5faff');
-  sph.addColorStop(.18,'#caeffe');
-  sph.addColorStop(.52,'#52b8e8');
-  sph.addColorStop(.84,'#1560a5');
-  sph.addColorStop(1,  '#0a3c6e');
-  ctx.fillStyle=sph;
-  ctx.beginPath(); ctx.arc(sx,sy,PR,0,Math.PI*2); ctx.fill();
-
-  // Rim light (bottom-right edge glow)
-  const rim=ctx.createRadialGradient(sx+PR*.55,sy+PR*.5,0,sx+PR*.55,sy+PR*.5,PR*.7);
-  rim.addColorStop(0,'rgba(80,190,255,.22)');
-  rim.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=rim;
-  ctx.beginPath(); ctx.arc(sx,sy,PR,0,Math.PI*2); ctx.fill();
-
-  // Primary specular highlight
-  ctx.fillStyle='rgba(255,255,255,.92)';
-  ctx.beginPath(); ctx.arc(sx-PR*.30, sy-PR*.32, PR*.21, 0,Math.PI*2); ctx.fill();
-
-  // Tiny secondary highlight
-  ctx.fillStyle='rgba(255,255,255,.52)';
-  ctx.beginPath(); ctx.arc(sx-PR*.10, sy-PR*.53, PR*.09, 0,Math.PI*2); ctx.fill();
+  // Simple outline
+  ctx.lineWidth=2;
+  ctx.strokeStyle='#003c5c';
+  ctx.stroke();
 }
 
 /* ─── DRAW PARTICLES ─────────────────────────────────── */
@@ -899,16 +846,14 @@ function drawHUD(){
   ctx.textAlign='right';
   ctx.font=`900 26px ${F}`;
   ctx.fillStyle='#00e5ff';
-  ctx.shadowColor='#00e5ff'; ctx.shadowBlur=18;
   ctx.fillText(score, W-13, 34);
-  ctx.shadowBlur=0;
   ctx.font=`400 8.5px ${F}`;
-  ctx.fillStyle='#28637f';
+  ctx.fillStyle='#50738a';
   ctx.fillText('HEIGHT', W-13, 50);
 
   // Best — bottom right
   ctx.font=`400 11px ${F}`;
-  ctx.fillStyle='#1a4a62';
+  ctx.fillStyle='#3a5b70';
   ctx.fillText(`BEST  ${best}`, W-13, H-13);
 
   // Combo — top left (only if > 1)
@@ -916,12 +861,10 @@ function drawHUD(){
     ctx.textAlign='left';
     ctx.font=`700 22px ${F}`;
     const hue = Math.min(combo*9, 50);
-    ctx.fillStyle=`hsl(${36-hue},100%,62%)`;
-    ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=12;
+    ctx.fillStyle=`hsl(${36-hue},100%,56%)`;
     ctx.fillText(`×${combo}`, 13, 34);
-    ctx.shadowBlur=0;
     ctx.font=`400 8.5px ${F}`;
-    ctx.fillStyle='#553318';
+    ctx.fillStyle='#6b4830';
     ctx.fillText('COMBO', 13, 50);
   }
 
@@ -929,15 +872,12 @@ function drawHUD(){
   if(mode==='play'){
     const barW=60, barH=3, bx=13, by=H-16;
     const fill=Math.min(scrollSpd/2.6,1);
-    ctx.fillStyle='rgba(0,50,80,.55)';
+    ctx.fillStyle='rgba(0,50,80,.35)';
     ctx.fillRect(bx,by,barW,barH);
-    const bg=ctx.createLinearGradient(bx,by,bx+barW*fill,by);
-    bg.addColorStop(0,'#005588');
-    bg.addColorStop(1,'#00e5ff');
-    ctx.fillStyle=bg;
+    ctx.fillStyle='#00b6ff';
     ctx.fillRect(bx,by,barW*fill,barH);
     ctx.font=`400 8px ${F}`;
-    ctx.fillStyle='#1a4a62';
+    ctx.fillStyle='#3a5b70';
     ctx.textAlign='left';
     ctx.fillText('SPEED',bx,H-20);
   }
@@ -958,72 +898,58 @@ function rrect(x,y,w,h,r){
 
 /* ─── TITLE SCREEN ───────────────────────────────────── */
 function drawTitle(){
-  ctx.fillStyle='rgba(1,6,18,.87)';
+  // Flat overlay
+  ctx.fillStyle='rgba(2,8,20,.9)';
   ctx.fillRect(0,0,W,H);
 
-  const cw=W*.84, ch=240, cx=(W-cw)/2, cy=H/2-ch/2-18;
-  ctx.fillStyle='rgba(0,22,52,.68)';
-  ctx.strokeStyle='rgba(0,170,240,.2)';
-  ctx.lineWidth=1;
-  rrect(cx,cy,cw,ch,14); ctx.fill(); ctx.stroke();
-
+  const cy=H/2-18;
   ctx.textAlign='center';
   ctx.font=`900 52px ${F}`;
   ctx.fillStyle='#00e5ff';
-  ctx.shadowColor='#00e5ff'; ctx.shadowBlur=32;
-  ctx.fillText('ICY', W/2, cy+68);
+  ctx.fillText('ICY', W/2, cy+40);
   ctx.fillStyle='#ffffff';
-  ctx.shadowColor='rgba(180,240,255,.7)'; ctx.shadowBlur=14;
-  ctx.fillText('SPHERE', W/2, cy+122);
-  ctx.shadowBlur=0;
+  ctx.fillText('SPHERE', W/2, cy+96);
 
   ctx.font=`400 10px ${F}`;
-  ctx.fillStyle='#18506a';
-  ctx.fillText('← →  MOVE         SPACE / ↑  JUMP', W/2, cy+152);
+  ctx.fillStyle='#6a8493';
+  ctx.fillText('← →  MOVE         SPACE / ↑  JUMP', W/2, cy+126);
 
   // Pulsing start prompt
   const p=.55+.45*Math.sin(Date.now()*.003);
   ctx.globalAlpha=p;
   ctx.font=`700 13px ${F}`;
   ctx.fillStyle='#00e5ff';
-  ctx.fillText('PRESS SPACE TO START', W/2, cy+ch-24);
+  ctx.fillText('PRESS SPACE TO START', W/2, cy+160);
   ctx.globalAlpha=1;
 }
 
 /* ─── GAME OVER SCREEN ───────────────────────────────── */
 function drawDead(){
-  ctx.fillStyle='rgba(1,4,14,.84)';
+  // Flat overlay
+  ctx.fillStyle='rgba(4,6,14,.9)';
   ctx.fillRect(0,0,W,H);
 
-  const cw=W*.84, ch=230, cx=(W-cw)/2, cy=H/2-ch/2-18;
-  ctx.fillStyle='rgba(28,0,8,.72)';
-  ctx.strokeStyle='rgba(255,55,75,.2)';
-  ctx.lineWidth=1;
-  rrect(cx,cy,cw,ch,14); ctx.fill(); ctx.stroke();
+  const cy=H/2-18;
 
   ctx.textAlign='center';
   ctx.font=`900 44px ${F}`;
   ctx.fillStyle='#ff2d4a';
-  ctx.shadowColor='#ff1a38'; ctx.shadowBlur=28;
-  ctx.fillText('GAME OVER', W/2, cy+65);
-  ctx.shadowBlur=0;
+  ctx.fillText('GAME OVER', W/2, cy+40);
 
   ctx.font=`700 20px ${F}`;
   ctx.fillStyle='#00e5ff';
-  ctx.shadowColor='#00e5ff'; ctx.shadowBlur=10;
-  ctx.fillText(`SCORE  ${score}`, W/2, cy+106);
-  ctx.shadowBlur=0;
+  ctx.fillText(`SCORE  ${score}`, W/2, cy+84);
 
   ctx.font=`400 13px ${F}`;
-  ctx.fillStyle='#254e66';
-  ctx.fillText(`BEST  ${best}`, W/2, cy+134);
+  ctx.fillStyle='#6a8493';
+  ctx.fillText(`BEST  ${best}`, W/2, cy+112);
 
   if(deadDelay<=0){
     const p=.55+.45*Math.sin(Date.now()*.003);
     ctx.globalAlpha=p;
     ctx.font=`700 13px ${F}`;
     ctx.fillStyle='#ffffff';
-    ctx.fillText('PRESS SPACE TO RETRY', W/2, cy+ch-24);
+    ctx.fillText('PRESS SPACE TO RETRY', W/2, cy+152);
     ctx.globalAlpha=1;
   }
 }
