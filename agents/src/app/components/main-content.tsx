@@ -28,7 +28,7 @@ interface TableRow {
 }
 
 const tableData: TableRow[] = [
-  { id: "1",  name: "Component Library Theming Rollout",               agent: "EvoResolver",    agentIconType: "bot",        model: "GPT 5.4", created: "6 Jul 24, 22:10", status: { text: "Thread initialization",  duration: "26m 11s", type: "running"    }, chevron: "collapsed", indent: false, actions: "3icons" },
+  { id: "1",  name: "Component Library Theming Rollout Across Shared Design Tokens, Legacy Surface Patterns, and Cross-Team Visual Consistency Initiatives", agent: "EvoResolver",    agentIconType: "bot",        model: "GPT 5.4", created: "6 Jul 24, 22:10", status: { text: "Thread initialization",  duration: "26m 11s", type: "running"    }, chevron: "collapsed", indent: false, actions: "3icons" },
   { id: "2",  name: "Updating agent prompt for theme token migration", agent: "EvoResolver",    agentIconType: "bot",        model: "GPT 5.4", created: "6 Jul 24, 22:10", status: { text: "Thread initialization",  duration: "26m 11s", type: "running"    }, chevron: null,        indent: true,  actions: "4icons" },
   { id: "3",  name: "Exporting visual snapshots for themed components",agent: "EvoResolver",    agentIconType: "bot",        model: "GPT 5.4", created: "6 Jul 24, 22:10", status: { text: "Completed",              duration: "11s",     type: "completed",  endedAt: "6 Jul 24, 22:36" }, chevron: null,        indent: true,  actions: "4icons" },
   { id: "4",  name: "Meta-Analysis of Transformer Interpretability Methods", agent: "EvoResearcher",  agentIconType: "microscope", model: "GPT 5.4", created: "6 Jul 24, 22:10", status: { text: "Section 4 writing",     duration: "26m 11s", type: "running"                            }, chevron: null,        indent: false, actions: "1icon"  },
@@ -201,10 +201,20 @@ function WithTooltip({
   disabled?: boolean;
   centerText?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <div className={`relative group/tooltip${className ? ` ${className}` : ""}`}>
+    <div
+      className={`relative${className ? ` ${className}` : ""}`}
+      onMouseEnter={() => {
+        if (!disabled) {
+          setIsOpen(true);
+        }
+      }}
+      onMouseLeave={() => setIsOpen(false)}
+    >
       {children}
-      <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-[8px] z-50 pointer-events-none transition-all duration-150 ${disabled ? "hidden" : "opacity-0 -translate-y-[4px] group-hover/tooltip:opacity-100 group-hover/tooltip:translate-y-0"}`}>
+      <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-[8px] z-50 pointer-events-none transition-all duration-150 ${disabled ? "hidden" : isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-[4px]"}`}>
         <div className={`bg-[var(--neutral-700)] rounded-[8px] px-[12px] py-[8px] flex flex-col gap-[3px] whitespace-nowrap ${centerText ? "items-center text-center" : ""}`}>
           <span className="font-['SF_Pro:Regular',sans-serif] font-normal text-[12px] leading-[16px] text-[var(--neutral-200)]" style={{ fontVariationSettings: "'wdth' 100" }}>{title}</span>
           {subtitle && (
@@ -253,7 +263,7 @@ function TruncatedTitle({
   const textNode = (
     <div
       ref={textRef}
-      className={`block w-full ${textClassName}`}
+      className={`block w-full pointer-events-none ${textClassName}`}
       style={{ fontVariationSettings: "'wdth' 100" }}
     >
       {title}
