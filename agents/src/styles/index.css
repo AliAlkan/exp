@@ -1,0 +1,84 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+html,
+body,
+.agents-main-scroll {
+  scrollbar-color: var(--neutral-700) var(--neutral-900);
+  scrollbar-width: thin;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.agents-main-scroll::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.agents-main-scroll::-webkit-scrollbar-track {
+  background: var(--neutral-900);
+  border-left: 1px solid var(--neutral-800);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.agents-main-scroll::-webkit-scrollbar-thumb {
+  background: var(--neutral-700);
+  border: 3px solid var(--neutral-900);
+  border-radius: 4px;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--neutral-950);
+}
+
+body {
+  margin: 0;
+}
+
+.agents-background-gradient {
+  opacity: 0.88;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: transform;
+  animation: agents-background-gradient-rotate 24s ease-in-out infinite alternate;
+}
+
+@keyframes agents-background-gradient-rotate {
+  from {
+    transform: rotate(-15deg);
+  }
+
+  to {
+    transform: rotate(15deg);
+  }
+}
+
+.status-badge-running {
+  background: linear-gradient(90deg, #262626 0%, #3a3a3a 40%, #4a4a4a 50%, #3a3a3a 60%, #262626 100%);
+  background-size: 300% 100%;
+  animation: status-badge-shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes status-badge-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.outlined-command-trigger__content {
+  transition: background-color 150ms ease;
+}
+
+.outlined-command-trigger__border {
+  border-color: var(--outlined-command-trigger-color);
+}
+
+.outlined-command-trigger:hover .outlined-command-trigger__content {
+  background-color: var(--outlined-command-trigger-color);
+}
