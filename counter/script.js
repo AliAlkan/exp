@@ -129,8 +129,8 @@ function getElapsedRatio(now, start, end) {
 function formatPercentage(ratio, locale) {
   return new Intl.NumberFormat(locale, {
     style: "percent",
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(ratio);
 }
 
