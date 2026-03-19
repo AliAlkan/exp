@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Time Progress</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="counter-card" aria-label="Progress through the current day, week, month, and year">
+        <ol class="counter-list">
+          <li class="counter-row" data-period="day">
+            <span class="counter-label dot-text" data-field="label">Day</span>
+            <div class="dot-bar" data-field="bar" aria-hidden="true"></div>
+            <span class="counter-value dot-text" data-field="value">--.-%</span>
+          </li>
+          <li class="counter-row" data-period="week">
+            <span class="counter-label dot-text" data-field="label">Week</span>
+            <div class="dot-bar" data-field="bar" aria-hidden="true"></div>
+            <span class="counter-value dot-text" data-field="value">--.-%</span>
+          </li>
+          <li class="counter-row" data-period="month">
+            <span class="counter-label dot-text" data-field="label">Month</span>
+            <div class="dot-bar" data-field="bar" aria-hidden="true"></div>
+            <span class="counter-value dot-text" data-field="value">--.-%</span>
+          </li>
+          <li class="counter-row" data-period="year">
+            <span class="counter-label dot-text" data-field="label">Year</span>
+            <div class="dot-bar" data-field="bar" aria-hidden="true"></div>
+            <span class="counter-value dot-text" data-field="value">--.-%</span>
+          </li>
+        </ol>
+        <p class="counter-meta" data-field="meta" aria-live="polite">Using your local time</p>
+      </section>
+    </main>
+    <script src="./script.js"></script>
+  </body>
+</html>
