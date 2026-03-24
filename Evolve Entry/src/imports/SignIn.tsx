@@ -190,8 +190,8 @@ export default function SignIn() {
         </div>
 
         <div className="content-stretch flex flex-col gap-[16px] lg:flex-[1_0_0] lg:h-full min-h-0 min-w-px relative w-full lg:gap-0">
-          <div className="h-[96px] relative shrink-0 w-full">
-            <div className="lg:hidden content-stretch flex items-center justify-between size-full">
+          <div className="h-[96px] relative shrink-0 w-full lg:hidden">
+            <div className="content-stretch flex items-center justify-between size-full">
               <div className="w-[20px]" />
               <div className="content-stretch flex items-center justify-center flex-[1_0_0] px-4">
                 <Brand />
@@ -201,19 +201,22 @@ export default function SignIn() {
                 <ChevronDownIcon />
               </div>
             </div>
-            <div className="hidden lg:flex items-center justify-end px-[36px] size-full">
-              <div className="content-stretch flex gap-[10px] items-center">
-                <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[20px] text-[#a3a3a3] text-[14px]">English</p>
-                <ChevronDownIcon />
-              </div>
-            </div>
           </div>
 
           <div
             className="bg-[#171717] content-stretch flex flex-col items-center min-h-0 min-w-px overflow-visible relative rounded-[20px] w-full lg:bg-transparent lg:flex-[1_0_0] lg:overflow-x-hidden lg:overflow-y-auto lg:rounded-none"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            <div className="flex w-full flex-col justify-between lg:min-h-full">
+            <div className="hidden h-[96px] relative shrink-0 w-full lg:block">
+              <div className="flex items-center justify-end px-[36px] size-full">
+                <div className="content-stretch flex gap-[10px] items-center">
+                  <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[20px] text-[#a3a3a3] text-[14px]">English</p>
+                  <ChevronDownIcon />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex w-full flex-col justify-between lg:min-h-[calc(100%-96px)]">
               <div className="content-stretch flex flex-col gap-[40px] items-center mx-auto pb-[72px] relative shrink-0 w-[min(520px,calc(100%-40px))]">
                 <div className="content-stretch flex flex-col gap-[32px] items-start relative shrink-0 w-full">
                   <div className="content-stretch flex flex-col gap-[16px] items-center leading-[0] mt-8 lg:mt-0 relative shrink-0 w-full">

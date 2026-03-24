@@ -805,12 +805,17 @@ function Frame22() {
 function Frame17() {
   return (
     <div className="content-stretch flex flex-col gap-[16px] lg:flex-[1_0_0] lg:h-full min-h-0 min-w-px relative w-full lg:gap-0">
-      <Header1 />
+      <div className="w-full lg:hidden">
+        <Header1 />
+      </div>
       <div
         className="bg-[#171717] content-stretch flex flex-col items-center min-h-0 min-w-px overflow-visible relative rounded-[20px] w-full lg:bg-transparent lg:flex-[1_0_0] lg:overflow-x-hidden lg:overflow-y-auto lg:rounded-none"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <div className="content-stretch flex flex-col items-center w-full lg:min-h-full">
+        <div className="hidden w-full lg:block">
+          <Header1 />
+        </div>
+        <div className="content-stretch flex flex-col items-center w-full lg:min-h-[calc(100%-96px)]">
           <Frame14 />
           <div className="w-full content-stretch flex flex-col items-center lg:mt-auto">
             <Frame22 />
