@@ -35,39 +35,31 @@ jobs:
             nav-rail/package-lock.json
             agents/package-lock.json
             entry/package-lock.json
+            evo-entry/package-lock.json
 
       - name: Install dependencies
         run: |
           npm ci --prefix nav-rail
           npm ci --prefix agents
           npm ci --prefix entry
-
-      - name: Install entry dependencies
-        run: npm ci --prefix entry
+          npm ci --prefix evo-entry
 
       - name: Build site
         run: |
           VITE_BASE_PATH=/exp/nav-rail/ npm run build --prefix nav-rail
           VITE_BASE_PATH=/exp/agents/ npm run build --prefix agents
           npm run build --prefix entry -- --base=/exp/entry/
-
-      - name: Build entry site
-        run: npm run build --prefix entry -- --base=/exp/entry/
+          npm run build --prefix evo-entry -- --base=/exp/evo-entry/
 
       - name: Prepare Pages artifact
         run: |
-<<<<<<< HEAD
-          mkdir -p public/nav-rail public/icy-sphere public/agents public/counter public/entry
+          mkdir -p public/nav-rail public/icy-sphere public/agents public/counter public/entry public/evo-entry
           cp -R nav-rail/dist/. public/nav-rail/
           cp -R icy-sphere/. public/icy-sphere/
           cp -R agents/dist/. public/agents/
           cp -R counter/. public/counter/
-=======
-          mkdir -p public/nav-rail public/icy-sphere public/entry
-          cp -R nav-rail/dist/. public/nav-rail/
-          cp -R icy-sphere/. public/icy-sphere/
->>>>>>> 51d32129 (Add entry app and deploy it on GitHub Pages.)
           cp -R entry/dist/. public/entry/
+          cp -R evo-entry/dist/. public/evo-entry/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
