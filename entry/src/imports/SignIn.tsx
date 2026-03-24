@@ -174,7 +174,7 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const navigateToSignUp = () => {
-    window.location.assign(`${import.meta.env.BASE_URL}sign-up`);
+    window.location.assign(`${import.meta.env.BASE_URL}#/sign-up`);
   };
 
   return (
