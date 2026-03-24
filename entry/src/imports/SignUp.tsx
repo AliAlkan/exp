@@ -804,15 +804,20 @@ function Frame22() {
 
 function Frame17() {
   return (
-    <div className="content-stretch flex flex-[1_0_0] flex-col gap-[16px] h-full min-h-0 min-w-px relative w-full lg:gap-0">
+    <div className="content-stretch flex flex-col gap-[16px] lg:flex-[1_0_0] lg:h-full min-h-0 min-w-px relative w-full lg:gap-0">
+      <div className="w-full lg:hidden">
+        <Header1 />
+      </div>
       <div
-        className="bg-[#171717] content-stretch flex flex-[1_0_0] flex-col items-center min-h-0 min-w-px overflow-x-hidden overflow-y-auto relative rounded-[20px] w-full lg:bg-transparent lg:rounded-none"
+        className="bg-[#171717] content-stretch flex flex-col items-center min-h-0 min-w-px overflow-visible relative rounded-[20px] w-full lg:bg-transparent lg:flex-[1_0_0] lg:overflow-x-hidden lg:overflow-y-auto lg:rounded-none"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <div className="content-stretch flex flex-col items-center min-h-full w-full">
+        <div className="hidden w-full lg:block">
           <Header1 />
+        </div>
+        <div className="content-stretch flex flex-col items-center w-full lg:min-h-[calc(100%-96px)]">
           <Frame14 />
-          <div className="mt-auto w-full content-stretch flex flex-col items-center">
+          <div className="w-full content-stretch flex flex-col items-center lg:mt-auto">
             <Frame22 />
           </div>
         </div>
@@ -823,7 +828,7 @@ function Frame17() {
 
 function Frame18() {
   return (
-    <div className="content-stretch flex flex-1 h-full items-stretch justify-center lg:justify-between min-h-0 min-w-px overflow-hidden relative w-full lg:bg-[#171717] lg:rounded-[20px]">
+    <div className="content-stretch flex flex-1 items-stretch justify-center lg:h-full lg:justify-between min-h-0 min-w-px overflow-visible relative w-full lg:bg-[#171717] lg:overflow-hidden lg:rounded-[20px]">
       <MaskGroup />
       <Frame17 />
     </div>
@@ -832,7 +837,7 @@ function Frame18() {
 
 export default function SignUp() {
   return (
-    <div className="bg-[#0a0a0a] content-stretch flex flex-col h-screen h-[100svh] items-start overflow-hidden p-[16px] relative w-full" data-name="Sign up">
+    <div className="bg-[#0a0a0a] content-stretch flex flex-col min-h-screen items-start overflow-visible p-[16px] relative w-full lg:h-screen lg:h-[100svh] lg:overflow-hidden" data-name="Sign up">
       <Frame18 />
     </div>
   );
