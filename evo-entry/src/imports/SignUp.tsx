@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { EyeOff } from "lucide-react";
+import { navigateToAuthScreen } from "../app/authRoute";
 import svgPaths from "./svg-4w4zrs41l7";
 import evoBackground from "../assets/evo-bg.png";
 
@@ -49,7 +50,7 @@ function MaskGroup() {
 
 function Frame() {
   const navigateToSignIn = () => {
-    window.location.assign("/");
+    navigateToAuthScreen("sign-in");
   };
 
   return (

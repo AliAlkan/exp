@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { EyeOff } from "lucide-react";
+import { navigateToAuthScreen } from "../app/authRoute";
 import evoBackground from "../assets/evo-bg.png";
 import svgPaths from "./svg-4w4zrs41l7";
 
@@ -174,7 +175,7 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const navigateToSignUp = () => {
-    window.location.assign("/sign-up");
+    navigateToAuthScreen("sign-up");
   };
 
   return (
