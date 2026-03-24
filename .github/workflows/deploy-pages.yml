@@ -34,24 +34,28 @@ jobs:
           cache-dependency-path: |
             nav-rail/package-lock.json
             agents/package-lock.json
+            entry/package-lock.json
 
       - name: Install dependencies
         run: |
           npm ci --prefix nav-rail
           npm ci --prefix agents
+          npm ci --prefix entry
 
       - name: Build site
         run: |
           VITE_BASE_PATH=/exp/nav-rail/ npm run build --prefix nav-rail
           VITE_BASE_PATH=/exp/agents/ npm run build --prefix agents
+          npm run build --prefix entry -- --base=/exp/entry/
 
       - name: Prepare Pages artifact
         run: |
-          mkdir -p public/nav-rail public/icy-sphere public/agents public/counter
+          mkdir -p public/nav-rail public/icy-sphere public/agents public/counter public/entry
           cp -R nav-rail/dist/. public/nav-rail/
           cp -R icy-sphere/. public/icy-sphere/
           cp -R agents/dist/. public/agents/
           cp -R counter/. public/counter/
+          cp -R entry/dist/. public/entry/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
