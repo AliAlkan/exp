@@ -763,7 +763,7 @@ export default function App() {
                 )}
               </main>
 
-              <aside className="order-first min-w-0 space-y-4 lg:sticky lg:bottom-4 lg:self-end lg:order-none lg:col-span-1">
+              <aside className="order-first min-w-0 space-y-4 lg:order-none lg:col-span-1">
                 <div className="flex flex-wrap items-center justify-between gap-1.5">
                   <Button
                     type="button"
