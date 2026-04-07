@@ -37,6 +37,7 @@ jobs:
             entry/package-lock.json
             evo-entry/package-lock.json
             agents-table/package-lock.json
+            ticket-detail/package-lock.json
 
       - name: Install dependencies
         run: |
@@ -45,6 +46,7 @@ jobs:
           npm ci --prefix entry
           npm ci --prefix evo-entry
           npm ci --prefix agents-table
+          npm ci --prefix ticket-detail
 
       - name: Build site
         run: |
@@ -53,10 +55,11 @@ jobs:
           npm run build --prefix entry -- --base=/exp/entry/
           npm run build --prefix evo-entry -- --base=/exp/evo-entry/
           npm run build --prefix agents-table -- --base=/exp/agents-table/
+          VITE_BASE_PATH=/exp/ticket-detail/ npm run build --prefix ticket-detail
 
       - name: Prepare Pages artifact
         run: |
-          mkdir -p public/nav-rail public/icy-sphere public/agents public/counter public/entry public/evo-entry public/agents-table
+          mkdir -p public/nav-rail public/icy-sphere public/agents public/counter public/entry public/evo-entry public/agents-table public/ticket-detail
           cp -R nav-rail/dist/. public/nav-rail/
           cp -R icy-sphere/. public/icy-sphere/
           cp -R agents/dist/. public/agents/
@@ -64,6 +67,7 @@ jobs:
           cp -R entry/dist/. public/entry/
           cp -R evo-entry/dist/. public/evo-entry/
           cp -R agents-table/dist/. public/agents-table/
+          cp -R ticket-detail/dist/. public/ticket-detail/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
