@@ -83,6 +83,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import inProgressIcon from "@/assets/in-progress.svg"
 import appLogo from "@/assets/logo.svg"
 import { cn } from "@/lib/utils"
 
@@ -1697,7 +1698,7 @@ export default function App() {
                               </span>
                             ) : (
                               <span className="inline-flex h-7 items-center gap-2 rounded-[10px] bg-neutral-800 px-2 text-sm text-neutral-300">
-                                <img src="/src/assets/in-progress.svg" alt="" className="size-3.5 shrink-0" />
+                                <img src={inProgressIcon} alt="" className="size-3.5 shrink-0" />
                                 In progress
                               </span>
                             )}
@@ -1956,7 +1957,7 @@ export default function App() {
                                     {ticket.status === "complete" ? (
                                       <><Check className="size-3.5 text-emerald-400" />Complete</>
                                     ) : (
-                                      <><img src="/src/assets/in-progress.svg" alt="" className="size-3.5 shrink-0" />In progress</>
+                                      <><img src={inProgressIcon} alt="" className="size-3.5 shrink-0" />In progress</>
                                     )}
                                   </span>
                                 </div>
@@ -2171,7 +2172,7 @@ export default function App() {
                             <dt className="w-24 shrink-0 text-sm font-normal leading-5 text-neutral-400">Agent run</dt>
                             <dd className="min-w-0 flex-1 space-y-1">
                               <div className="inline-flex h-7 w-[114px] items-center justify-center gap-2 rounded-[10px] bg-neutral-800 px-2 text-sm font-normal leading-5 text-neutral-300">
-                                <img src="/src/assets/in-progress.svg" alt="" className="size-4 shrink-0" />
+                                <img src={inProgressIcon} alt="" className="size-4 shrink-0" />
                                 In progress
                               </div>
                               <p className="text-sm font-normal leading-5 text-muted-foreground">
@@ -2859,7 +2860,7 @@ export default function App() {
                           <dd className="min-w-0 flex-1 space-y-1">
                             <div className="inline-flex h-7 w-[114px] items-center justify-center gap-2 rounded-[10px] bg-neutral-800 px-2 text-sm font-normal leading-5 text-neutral-300">
                               <img
-                                src="/src/assets/in-progress.svg"
+                                src={inProgressIcon}
                                 alt=""
                                 className="size-4 shrink-0"
                               />
