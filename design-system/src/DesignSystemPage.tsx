@@ -595,7 +595,7 @@ export default function DesignSystemPage() {
                 {/* Behind layer — Figma 33:13 */}
                 <div className="absolute h-[820px] w-[938px]" style={{ left: -315, top: -810 }}>
                   <img
-                    src="/evo-gradient.svg"
+                    src={`${ASSET_BASE_PATH}evo-gradient.svg`}
                     alt=""
                     className="absolute block max-w-none"
                     style={{ inset: "-24.39% -21.32%", width: "calc(100% + 42.64%)", height: "calc(100% + 48.78%)" }}
@@ -603,7 +603,7 @@ export default function DesignSystemPage() {
                 </div>
                 {/* Overlay layer — same SVG on top, both clipped by overflow-hidden */}
                 <img
-                  src="/evo-gradient.svg"
+                  src={`${ASSET_BASE_PATH}evo-gradient.svg`}
                   alt=""
                   className="absolute left-0 top-0 h-auto w-auto max-w-none"
                 />
