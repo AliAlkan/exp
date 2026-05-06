@@ -5,6 +5,8 @@ import {
   Check,
   Circle,
   Download,
+  Moon,
+  Sun,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -428,26 +430,43 @@ function LightModeSwitch({
   onToggle: () => void
 }) {
   return (
-    <div className="ds-switch-wrap flex h-fit w-fit items-center gap-2 rounded-full bg-neutral-800 px-3 py-1.5">
-      <span className="ds-body text-sm text-neutral-400">Light mode</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={isLightMode}
-        onClick={onToggle}
+    <button
+      type="button"
+      role="switch"
+      aria-checked={!isLightMode}
+      aria-label={isLightMode ? "Switch to dark mode" : "Switch to light mode"}
+      onClick={onToggle}
+      className={cn(
+        "ds-theme-switch relative grid h-9 w-[76px] grid-cols-2 items-center rounded-full border-0 p-1 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]",
+        isLightMode ? "bg-neutral-100" : "bg-neutral-800",
+      )}
+    >
+      <span
+        aria-hidden="true"
         className={cn(
-          "ds-switch relative h-7 w-12 rounded-full border border-neutral-700 bg-neutral-900 transition-colors",
-          isLightMode && "bg-neutral-100",
+          "absolute inset-y-1 left-1 w-[34px] rounded-full transition-transform duration-200 ease-out",
+          isLightMode ? "translate-x-0 bg-white shadow-sm" : "translate-x-[34px] bg-neutral-700 shadow-sm",
         )}
-      >
-        <span
+      />
+      <span className="relative z-10 flex items-center justify-center">
+        <Sun
           className={cn(
-            "absolute left-1 top-1 size-5 rounded-full bg-neutral-500 transition-transform",
-            isLightMode && "translate-x-5 bg-[#932794]",
+            "size-4 transition-colors duration-200",
+            isLightMode ? "text-neutral-900" : "text-neutral-500",
           )}
+          strokeWidth={1.7}
         />
-      </button>
-    </div>
+      </span>
+      <span className="relative z-10 flex items-center justify-center">
+        <Moon
+          className={cn(
+            "size-4 transition-colors duration-200",
+            isLightMode ? "text-neutral-500" : "text-neutral-50",
+          )}
+          strokeWidth={1.7}
+        />
+      </span>
+    </button>
   )
 }
 
@@ -459,7 +478,7 @@ function TopNavigation({
   onToggle: () => void
 }) {
   return (
-    <header className="ds-top-nav sticky top-0 z-40 h-[60px] border-b border-neutral-900/60 bg-[#0a0a0a]/90 backdrop-blur-xl">
+    <header className="ds-top-nav sticky top-0 z-40 h-[60px] bg-[#0a0a0a]/90 backdrop-blur-xl">
       <div className="flex h-full items-center justify-between px-6">
         {/* Logo */}
         <a

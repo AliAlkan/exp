@@ -179,7 +179,18 @@
 }
 
 .ds-page[data-color-mode="light"] .ds-right-gradient {
-  display: none;
+  display: block;
+  opacity: 0.78;
+}
+
+.ds-page[data-color-mode="light"] .ds-right-gradient > div {
+  background: linear-gradient(to bottom, #ffffff 0%, #f7f7f8 100%) !important;
+}
+
+.ds-page[data-color-mode="light"] .ds-right-gradient img {
+  filter: brightness(1.16) saturate(1.08);
+  mix-blend-mode: multiply;
+  opacity: 0.68;
 }
 
 .ds-page[data-color-mode="light"] .ds-card,
